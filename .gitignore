@@ -1,0 +1,17 @@
+*.ckpt
+slurm*
+byprot
+cameo
+fasta
+*.pyc
+workdir
+.cache
+./data
+trash
+.ipynb_checkpoints
+*.ipynb
+*.csv
+tmp
+__pycache__
+scratch.ipynb
+.neptune

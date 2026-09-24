@@ -1,0 +1,243 @@
+ckpt: 576M.ckpt
+pretrained:  #  load weights from here first
+validate: true # if true, only validate the model, don't train
+logger:
+    # set to true to log to neptune.ai
+    neptune: false
+    run_id: 
+    # please change "test" to something unique to your task
+    project: your-workspace/your-project
+    # will log to workdir and neptune.ai with this name
+    name: func-eval
+    # if not null, will duplicate stdout and stderr to workdir/{name}/{logfile}
+    logfile: std.out
+    # if null, will log every epoch, otherwise every this number of steps
+    train_log_freq: 100
+    val_log_freq: null 
+    ckpt_freq: 50000000000
+    save_freq: 1000
+trainer:
+    accelerator: auto
+    devices: 8
+    max_epochs: 1
+    max_steps: 1000000
+    enable_progress_bar: false
+    limit_train_batches: 1.0
+    limit_val_batches: 1.0
+    num_sanity_val_steps: 0
+    gradient_clip_val: 1.0
+    accumulate_grad_batches: 1
+    val_check_interval: 10000
+    check_val_every_n_epoch: 1
+    logger: false
+    precision: 16-mixed
+
+# custom args to OpenProtDataset and elsewhere
+data: 
+    num_workers: 16
+    buffer: 1000
+    max_sq_toks: 
+    max_toks: 16384
+    batch: null
+    crop: 512
+    seed: 1780
+    all_atom: false
+
+# These are the raw features which are expected to be supplied by the Datasets
+# before they are TOKENIZED by the Tracks.
+# We specify them and their shapes so that datasets can supply default values if missing
+# for example, a structure dataset will not supply any dynamics information.
+# We also need to set defaults for the "mask" and "noise" because not all Tasks will set them.
+# -1 means this is the LEGNTH dim. 
+features:
+    # sequence feats
+    atom_num: [-1] # ligands only
+    mol_type: [-1] # default 0 = protein
+    residx: [-1]
+    chain: [-1]
+    
+    seq_mask: [-1]
+    seq_noise: [-1]
+    
+    struct: [-1, 3]
+    struct_mask: [-1]
+    struct_noise: [-1]
+
+    nma: [-1, 3]
+    nma_mask: [-1]
+
+    motif: [-1, 3] 
+    motif_mask: [-1]
+    motif_float_mask: [-1]
+    motif_idx: [-1]
+    motif_nma: [-1, 3]
+    motif_nma_mask: [-1]
+    
+    ligand_mask: [-1]
+    hotspot_mask: [-1]
+
+    cath: [-1, 3]
+    cath_noise: [-1]
+
+    go_terms: [-1]
+    go_noise: [-1]
+
+    sites: [-1, 12]
+    site_noise: [-1]
+
+edm:
+    sched_p: 7
+    sigma_max: 160
+    noise_max: ${edm.sigma_max}
+    sigma_min: 0.05
+    sigma_data: 15
+    sigma_perturb: 0
+    center: true
+
+motif:
+    nmax: 4
+    ymin: 0.05
+    ymax: 0.35
+    weight: 1.0
+    multi_prob: 0.0
+    nma_prob: 0.0
+    float_prob: 0.5
+
+ppi:
+    contact: 8
+    long_range: 24
+    gap_pad: 5
+    gap_min: 12
+    gap_max: 24
+    hotspot: 12
+    
+datasets: []
+
+    
+tasks: []
+
+evals: 
+       
+    function:
+        type: MultistateEditEval
+        prot: data/pdb_npz/lu/6lux_A.npz
+        motif_pos: 124
+        seqres: 'MSHHWGYGKHNGPEHWHKDFPIAKGERQSPVDIDTHTAKYDPSLKPLSVSYDQATSLRILNNGHAFNVEFDDSQDKAVLKGGPLDGTYRLIQFHFHWGSLDGQGSEHTVDKKKYAAELHLVHWNTKYGDFGKAVQQPDGLAVLGIFLKVGSAKPGLQKVVDVLDSIKTKGKSADFTNFDPRGLLPESLDYWTYPGSLTTPPLLECVTWIVLKEPISVSSEQVLKFRKLNFNGEGEPEELMVDNWRPAQPLKNRQIKASFK'
+        num_samples: 3200
+        guidance: 
+            struct: 1
+            seq: 1
+        batch: 100
+        steps: 200 # 500
+        skew: 0.0
+        struct:
+            noise_level: 160
+            edm_p: 7 # 5
+            edm: ${edm}
+            temp_factor: 0.5
+            sde_weight: 1.0 # 4.0
+            sde_exp: 0.5 # 1.0
+            align: false
+        seq:
+            bias: 0
+            noise_level: 1.0
+            temp_start: 0.5
+            temp_end: 0.1
+            strategy: dplm
+            noise: 20
+            logits: gumbel
+            adjust_unmasked: false # pseudo-masked logits
+            replace_unmasked: true # logit of current toks
+            topk_temp: 0.0
+            allow_mutation: false
+        seq1:
+            bias: 0
+            noise_level: 1.0
+            temp_start: 0.1
+            temp_end: 0.1
+            strategy: random
+            noise: 20
+            logits: standard
+            adjust_unmasked: false # pseudo-masked logits
+            replace_unmasked: false # logit of current toks
+            topk_temp: 0.0
+            allow_mutation: true
+        savedir: experiments/carbonic_anhydrase/6lux_8A_znca_320_random
+        zn: true
+        run_designability: true
+        run_inf: true
+        run_chai: true
+        redesign: true
+        mask: experiments/carbonic_anhydrase/6lux_mask_8.npy
+
+tracks:
+    # register tracks here
+    StructureTrack: 
+        loss_weight: 1.0
+        embed_motif: true
+        embed_float_motif: true
+        embed_ligand: false
+        embed_nma: false
+        embed_mask_as_noise: true
+        edm: ${edm}
+        all_atom: ${data.all_atom}
+        readout_adaLN: false
+        loss:
+            mse: 1.0
+            aligned_mse: 0.0
+            lddt: 0.0
+        diffusion:
+            type: EDMDiffusion
+            data_sigma: ${edm.sigma_data}
+            train_align: false
+        
+    SequenceTrack:
+        esm: # esm2_3B # esm2_650M # esm2_8M_270K
+        loss_weight: 3.0 
+        esm_lm_head: true
+        tied_weights: false
+        reweight: linear
+        func_cond: false
+        reweight_eps: 0.01
+        init: 0.02
+        all_atom: ${data.all_atom}
+        mlm_prob: 0.00
+        mlm_ratio: 1.0
+        mlm_weight: 1.0
+
+    FunctionTrack:
+        loss_weight: 0.0
+        go_vocab: splits/go_vocab.json
+        drop_prob: 0.15
+    
+model: # custom args
+    ema: 0.999
+    self_cond: false
+    self_cond_prob: 0.0
+    dim: 1024
+    heads: 16
+    blocks: 30
+    dropout: 0.2
+    token_dropout: 0.0
+    ff_expand: 4
+    rope_attn: true
+    rope_values: true
+    attn_mask: 
+    cross_attn: false
+    adaLN: true
+    qk_norm: true
+    act: gelu
+    ligand: false
+
+optimizer:
+    type: AdamW
+    lr: 1e-4
+    # betas: [0.9, 0.98]
+    # eps: 1e-8
+    # weight_decay: 0.01
+    # fused: true
+    scheduler: 
+        total_steps: 1000000
+        warmup_steps: 1000
+        start_decay: 10000
+        end_factor: 0.1

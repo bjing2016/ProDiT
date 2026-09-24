@@ -1,0 +1,280 @@
+ckpt: 321M.ckpt
+pretrained:  
+validate: true
+logger:
+    neptune: false
+    run_id: 
+    project: your-workspace/your-project
+    name: default
+    logfile: std.out
+    train_log_freq: 100
+    val_log_freq: null 
+    ckpt_freq: 50000000000
+    save_freq: 1000
+trainer:
+    accelerator: auto
+    devices: 8
+    max_epochs: 1
+    max_steps: 1000000
+    enable_progress_bar: false
+    limit_train_batches: 1.0
+    limit_val_batches: 1
+    num_sanity_val_steps: 0
+    gradient_clip_val: 1.0
+    accumulate_grad_batches: 1
+    val_check_interval: 10000
+    check_val_every_n_epoch: 1
+    logger: false
+    precision: 16-mixed
+
+# custom args to OpenProtDataset and elsewhere
+data: 
+    num_workers: 16
+    buffer: 1000
+    max_sq_toks: 
+    max_toks: 12288
+    batch: null
+    crop: 384
+    seed: 139
+    all_atom: false
+
+# These are the raw features which are expected to be supplied by the Datasets
+# before they are TOKENIZED by the Tracks.
+# We specify them and their shapes so that datasets can supply default values if missing
+# for example, a structure dataset will not supply any dynamics information.
+# We also need to set defaults for the "mask" and "noise" because not all Tasks will set them.
+# -1 means this is the LEGNTH dim. 
+features:
+    # sequence feats
+    atom_num: [-1] # ligands only
+    mol_type: [-1] # default 0 = protein
+    residx: [-1]
+    chain: [-1]
+    
+    seq_mask: [-1]
+    seq_noise: [-1]
+    
+    struct: [-1, 3]
+    struct_mask: [-1]
+    struct_noise: [-1]
+
+    nma: [-1, 3]
+    nma_mask: [-1]
+
+    motif: [-1, 3] 
+    motif_mask: [-1]
+    motif_float_mask: [-1]
+    motif_idx: [-1]
+    motif_nma: [-1, 3]
+    motif_nma_mask: [-1]
+    
+    ligand_mask: [-1]
+    hotspot_mask: [-1]
+
+    cath: [-1, 3]
+    cath_noise: [-1]
+
+    go_terms: [-1]
+    go_noise: [-1]
+
+    sites: [-1, 12]
+    site_noise: [-1]
+edm:
+    sched_p: 7
+    sigma_max: 160
+    noise_max: ${edm.sigma_max}
+    sigma_min: 0.05
+    sigma_data: 15
+    sigma_perturb: 0
+    center: true
+
+motif:
+    nmax: 4
+    ymin: 0.05
+    ymax: 0.5
+    weight: 1.0
+    multi_prob: 0.5
+    nma_prob: 0.5
+
+ppi:
+    contact: 8
+    long_range: 24
+    gap_pad: 5
+    gap_min: 12
+    gap_max: 24
+    hotspot: 12
+    
+datasets: []
+tasks: []
+
+
+evals: 
+    seq_gen_dplm_100: 
+        type: SequenceGenerationEval
+        num_samples: 100
+        sample_length: 100
+        batch: 100
+        steps: 500
+        temp_start: 1.0
+        temp_end: 1.0
+        strategy: dplm
+        logits: gumbel
+        remask: 0.0
+        topk_temp: 0.0
+        replace_unmasked: false
+        adjust_unmasked: false
+        allow_mutation: false
+        savedir: experiments/seq_gen/ours/len100_dplm
+        run_inf: true
+        run_vendi: true
+        run_esmfold: true
+    seq_gen_dplm_200: 
+        type: SequenceGenerationEval
+        num_samples: 100
+        sample_length: 200
+        batch: 100
+        steps: 500
+        temp_start: 1.0
+        temp_end: 1.0
+        strategy: dplm
+        logits: gumbel
+        remask: 0.0
+        topk_temp: 0.0
+        replace_unmasked: false
+        adjust_unmasked: false
+        allow_mutation: false
+        savedir: experiments/seq_gen/ours/len200_dplm
+        run_inf: true
+        run_vendi: true
+        run_esmfold: true
+    seq_gen_dplm_300: 
+        type: SequenceGenerationEval
+        num_samples: 100
+        sample_length: 300
+        batch: 100
+        steps: 500
+        temp_start: 1.0
+        temp_end: 1.0
+        strategy: dplm
+        logits: gumbel
+        remask: 0.0
+        topk_temp: 0.0
+        replace_unmasked: false
+        adjust_unmasked: false
+        allow_mutation: false
+        savedir: experiments/seq_gen/ours/len300_dplm
+        run_inf: true
+        run_vendi: true
+        run_esmfold: true
+    seq_gen_dplm_400: 
+        type: SequenceGenerationEval
+        num_samples: 100
+        sample_length: 400
+        batch: 100
+        steps: 500
+        temp_start: 1.0
+        temp_end: 1.0
+        strategy: dplm
+        logits: gumbel
+        remask: 0.0
+        topk_temp: 0.0
+        replace_unmasked: false
+        adjust_unmasked: false
+        allow_mutation: false
+        savedir: experiments/seq_gen/ours/len400_dplm
+        run_inf: true
+        run_vendi: true
+        run_esmfold: true
+    seq_gen_dplm_500: 
+        type: SequenceGenerationEval
+        num_samples: 100
+        sample_length: 500
+        batch: 100
+        steps: 500
+        temp_start: 1.0
+        temp_end: 1.0
+        strategy: dplm
+        logits: gumbel
+        remask: 0.0
+        topk_temp: 0.0
+        replace_unmasked: false
+        adjust_unmasked: false
+        allow_mutation: false
+        savedir: experiments/seq_gen/ours/len500_dplm
+        run_inf: true
+        run_vendi: true
+        run_esmfold: true
+
+          
+
+tracks:
+    # register tracks here
+    StructureTrack: 
+        loss_weight: 1.0
+        embed_motif: true
+        embed_float_motif: false
+        embed_ligand: true
+        embed_nma: true
+        embed_mask_as_noise: true
+        edm: ${edm}
+        all_atom: ${data.all_atom}
+        readout_adaLN: false
+        loss:
+            mse: 1.0
+            aligned_mse: 0.0
+            lddt: 0.0
+        diffusion:
+            type: EDMDiffusion
+            data_sigma: ${edm.sigma_data}
+            train_align: false
+        
+    SequenceTrack:
+        esm: # esm2_3B # esm2_650M # esm2_8M_270K
+        loss_weight: 3.0 
+        esm_lm_head: true
+        tied_weights: false
+        reweight: linear
+        func_cond: false
+        reweight_eps: 0.01
+        init: 0.02
+        all_atom: ${data.all_atom}
+        mlm_prob: 0.03
+        mlm_ratio: 1.0
+        mlm_weight: 1.0
+
+    CATHTrack:
+        loss_weight: 0.0
+        idx: splits/cath-names.txt
+        drop_prob: [0.5, 0.1, 0.15]
+    
+model: # custom args
+    ema: 0.999
+    self_cond: false
+    self_cond_prob: 0.0
+    dim: 768
+    heads: 16
+    blocks: 30
+    dropout: 0.2
+    token_dropout: 0.0
+    ff_expand: 4
+    rope_attn: true
+    rope_values: true
+    attn_mask: 2
+    cross_attn: false
+    adaLN: true
+    qk_norm: true
+    act: gelu
+    ligand: false
+
+optimizer:
+    type: AdamW
+    lr: 1e-4
+    # betas: [0.9, 0.98]
+    # eps: 1e-8
+    # weight_decay: 0.01
+    # fused: true
+    scheduler: 
+        total_steps: 1000000
+        warmup_steps: 1000
+        start_decay: 10000
+        end_factor: 1.00
